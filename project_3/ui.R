@@ -9,6 +9,8 @@
 
 library(shiny)
 
+#make a data set of about 500 movies from movie API and use it for my app for Project 3
+
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
 
