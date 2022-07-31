@@ -12,6 +12,7 @@ library(tree)
 library(readxl)
 library(readr)
 library(rpart.plot)
+library(randomForest)
 
 data <- read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//movie_data_7_30_2022.csv")
 #data<-read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//project_3//movie_data.csv") #put the excel sheet in the same file as the server.R and ui.R files!
@@ -125,11 +126,20 @@ format_data <- function(data){
 data <- format_data(data)
 data$Rated[data$Rated == "N/A"] <- NA
 data <- data %>% select(-c(Metascore,BoxOffice))
+data$Rated <- droplevels(data$Rated)
+data$first_Genre <- droplevels(data$first_Genre)
+data$first_Country <- droplevels(data$first_Country)
+data$Summary_Awards <- droplevels(data$Summary_Awards)
 data_with_titles <- data[complete.cases(data), ]
 
 data <- data %>% select(-c(Title,Director,Writer,Actors ))
 
 data <- data[complete.cases(data), ]
+data$Rated <- droplevels(data$Rated)
+data$first_Genre <- droplevels(data$first_Genre)
+data$first_Country <- droplevels(data$first_Country)
+data$Summary_Awards <- droplevels(data$Summary_Awards)
+data_with_titles <- data[complete.cases(data), ]
 set.seed(dim(data)[1])
 # train <- sample(1:nrow(A), size = nrow(A)*0.8)
 # test <- dplyr::setdiff(1:nrow(A), train)
@@ -288,6 +298,21 @@ shinyUI(pageWithSidebar(
                                            "nchar_Title",
                                            "average_rating"),
                                  selected = "average_rating"),
+                     h4("Random Forest"),
+                     selectInput(inputId="random_forest_response",
+                                 label="Choose the Variable You Would Like to Predict in Your Random Forest",
+                                 choices=c("Year",
+                                           "Rated",
+                                           "Runtime",
+                                           "imdbRating",
+                                           "imdbVotes",
+                                           "nchar_Title",
+                                           "first_Genre",
+                                           "first_Country",
+                                           "Summary_Awards",
+                                           "average_rating"),
+                                 selected = "Year"),
+                     
                      actionButton(inputId="execute",
                                   label="Go!")),
     
@@ -398,7 +423,7 @@ shinyUI(pageWithSidebar(
       tabPanel("Modeling",value=5,
                tabsetPanel(
                  tabPanel("Modeling Info",value=6),
-                 tabPanel("Model Fitting",value=7,DT::dataTableOutput("table"),plotOutput("tree_plot"),textOutput("tree_RMSE_train")),
+                 tabPanel("Model Fitting",value=7,DT::dataTableOutput("table"),plotOutput("tree_plot"),textOutput("tree_RMSE_train"), verbatimTextOutput("rf_RMSE_train"), verbatimTextOutput("rf_RMSE_table"), plotOutput("varimp"), verbatimTextOutput("rf_train_stats")),
                  tabPanel("Prediction",value=8,textOutput("tree_RMSE")),
                  id="tab"
                )),
@@ -415,6 +440,448 @@ shinyUI(pageWithSidebar(
     )
   )
 ))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 
+# library(httr) #this package will help use use the URL we built to get information from the OMDb API
+# library(jsonlite) #this package will help us convert the data we get from the OMDb API to a more usable format
+# library(tidyverse) #this package will help us work with our nicely formatted data.
+# library(lubridate) #this package will help us create dates 
+# library(ggplot2) #this package will help us make graphs
+# library(readr)
+# library(class)
+# library(caret)
+# library(DT)
+# library(tree)
+# library(readxl)
+# library(readr)
+# library(rpart.plot)
+# 
+# data <- read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//movie_data_7_30_2022.csv")
+# #data<-read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//project_3//movie_data.csv") #put the excel sheet in the same file as the server.R and ui.R files!
+# 
+# #this will help us convert the Ratings.Value column to numeric
+# parse_number <- function(S){
+#   if(grepl("/", S)){
+#     A<-str_split(S, "/")
+#     A<-as.numeric(unlist(A))
+#     A<-A[[1]]/A[[2]]
+#     A<-A*100
+#   } else {
+#     A<-as.numeric(gsub("%","",S))
+#   }
+#   return(A)
+# }
+# 
+# #this will help us make the Summary_Awards column:
+# award <- function(S){
+#   if(is.na(S)){
+#     A<-"none"
+#     return(A)
+#   }
+#   S=tolower(S)
+#   #won and nominated:
+#   if((grepl("won", S) | grepl("win", S)) && (grepl("nomina", S))){
+#     A<-"won and nominated"
+#   }
+#   #only won:
+#   else if (grepl("won", S) | grepl("win", S)){
+#     A<-"won"
+#   }
+#   #only nominated:
+#   else if (grepl("nomina", S)){
+#     A<-"nomination"
+#   }
+#   #no awards or nominations:
+#   else {(A<-"none")
+#     return(A)
+#   }
+# }
+# 
+# mat1=NULL
+# format_data <- function(data){
+#   data$nchar_Title <- nchar(data$Title)
+#   data$Year <- as.numeric(data$Year)
+#   data$Rated <- as.factor(data$Rated)
+#   data$Released <- NULL
+#   data$Runtime <- as.numeric(gsub(" min","",data$Runtime))
+#   
+#   df <- data.frame(x = data$Genre)
+#   A<-df %>% separate(x, c('Genre_1'))
+#   data$first_Genre <- as.factor(A$Genre_1)
+#   data$Genre = NULL
+#   
+#   df <- data.frame(x = data$Country)
+#   A<-df %>% separate(x, c('Country_1'),sep=",")
+#   data$first_Country <- A$Country_1
+#   data$first_Country <- gsub("USA","United States",data$first_Country)
+#   data$first_Country <- as.factor(data$first_Country)
+#   data$Country = NULL
+#   
+#   data$Ratings.Value <- sapply(data$Ratings.Value, FUN=parse_number)
+#   data$Summary_Awards <- as.factor(sapply(data$Awards, FUN=award))
+#   data$Metascore <- as.numeric(data$Metascore)
+#   data$imdbRating <- as.numeric(data$imdbRating)*10
+#   data$imdbVotes <- as.numeric(gsub(",","",data$imdbVotes))
+#   data$DVD <- NULL
+#   data$BoxOffice <- gsub("\\$","",data$BoxOffice)
+#   data$BoxOffice <- as.numeric(gsub(",","",data$BoxOffice))
+#   
+#   data$Plot <- NULL
+#   data$Language <- NULL
+#   data$Awards<-NULL
+#   data$Poster<-NULL
+#   data$imdbID<-NULL
+#   data$Type<-NULL
+#   data$Production<-NULL
+#   data$Website<-NULL
+#   data$Response<-NULL
+#   
+#   movie_list<-unique(data$Title)
+#   
+#   for (i in movie_list){
+#     temp=data[is.element(data$Title,i),]
+#     Ratings.Value_mean<-mean(temp$Ratings.Value)
+#     Metascore<-unique(temp$Metascore)
+#     imdbRating<-unique(temp$imdbRating)
+#     
+#     #note: the average_rating column is the average of ratings from  
+#     #Internet Movie Database (when applicable)
+#     #Metacritic (when applicable)
+#     #Rotten Tomatoes (when applicable)
+#     #Metascore (when applicable)
+#     #imdbRating
+#     
+#     if(is.na(Metascore)==TRUE){
+#       temp$average_rating=(Ratings.Value_mean+imdbRating)/2
+#     }
+#     if(is.na(Metascore)==FALSE){
+#       temp$average_rating=(Ratings.Value_mean+Metascore+imdbRating)/3
+#     }
+#     mat1=rbind(mat1,temp)
+#   }
+#   mat1$Ratings.Value <- NULL
+#   mat1$Ratings.Source <- NULL
+#   mat1 <- unique(mat1)
+#   return(mat1)
+# }
+# 
+# data <- format_data(data)
+# data$Rated[data$Rated == "N/A"] <- NA
+# data <- data %>% select(-c(Metascore,BoxOffice))
+# data_with_titles <- data[complete.cases(data), ]
+# 
+# data <- data %>% select(-c(Title,Director,Writer,Actors ))
+# 
+# data <- data[complete.cases(data), ]
+# set.seed(dim(data)[1])
+# # train <- sample(1:nrow(A), size = nrow(A)*0.8)
+# # test <- dplyr::setdiff(1:nrow(A), train)
+# # ATrain <- A[train, ]
+# # ATest <- A[test, ]
+# 
+# 
+# # trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+# # dtree_fit <- train(average_rating ~ ., data = ATrain, method = "rpart",
+# #                    trControl = trctrl,
+# #                    tuneGrid = data.frame(cp=seq(0,0.1,0.01)))
+# # pred <- predict(dtree_fit, newdata = dplyr::select(ATest, -average_rating))
+# #sqrt(mean((pred-ATest$average_rating)^2))
+# 
+# 
+# library(shiny)
+# library(caret)
+# library(tidyverse)
+# library(DT)
+# #data("GermanCredit")
+# library(shiny)
+# library(ggplot2)
+# 
+# trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+# shinyUI(pageWithSidebar(
+#   headerPanel("Use case - Change the side bar panel elements based on the selected tab."),
+#   sidebarPanel(
+#     
+#     ## conditionalPanel() functions for selected tab
+#     #conditionalPanel(condition="input.tabselected==1",h4("Demo conditionalPanel()")),
+#     conditionalPanel(condition="input.tabselected==2",
+#                      # selectInput("dataset", "select the desired dataset", choices=ls('package:datasets'), 
+#                      #             selected = "mtcars"),
+#                      radioButtons("choice","Choose an option", choices=c("Dataset" = 1,
+#                                                                          "Structure" = 2,
+#                                                                          "Graphical Summary of Quantitative Data - Histogram" = 3,
+#                                                                          "Numerical Summary of Categorical Data - Contingency Tables" = 4,
+#                                                                          "Graphical Summary of Categorical Data - Barplots" = 5,
+#                                                                          "Graphical Summary of Quantitative Data - Scatter Plot" = 6,
+#                                                                          "Numerical Summaries of Quantitative Data" = 7))
+#                      
+#     ),
+#     
+#     conditionalPanel(condition="input.tabselected==2 && input.choice==3",
+#                      selectInput(inputId="hist_graph_variable",
+#                                  label="Choose Which Variable You Want to Graph",
+#                                  choices=c("Year",
+#                                            "Runtime",
+#                                            "imdbRating",
+#                                            "imdbVotes",
+#                                            "nchar_Title",
+#                                            "average_rating"),
+#                                  selected = "Year")),
+#     # 
+#     # conditionalPanel(condition="input.choice==4",
+#     #                  radioButtons(inputId="table",
+#     #                              label="Choose Contingency Table Type",
+#     #                              choices=c("One Way",
+#     #                                        "Two Way"),
+#     #                              selected = "One Way")),
+#     
+#     conditionalPanel(condition="input.tabselected==2 && input.choice==4",
+#                      selectInput(inputId="table_variable",
+#                                  label="Choose First Variable",
+#                                  choices=c("Rated",
+#                                            "first_Genre",
+#                                            "first_Country",
+#                                            "Summary_Awards"),
+#                                  selected = "Rated"),
+#                      selectInput(inputId="table_variable2",
+#                                  label="Choose Second Variable (if same as first, will make a one-way table)",
+#                                  choices=c("Rated",
+#                                            "first_Genre",
+#                                            "first_Country",
+#                                            "Summary_Awards"),
+#                                  selected = "first_Genre")),
+#     
+#     conditionalPanel(condition="input.tabselected==2 && input.choice==5",
+#                      selectInput(inputId="bar_plot_variable",
+#                                  label="Choose a Variable",
+#                                  choices=c("Rated",
+#                                            "first_Genre",
+#                                            "first_Country",
+#                                            "Summary_Awards"))),
+#     
+#     conditionalPanel(condition="input.tabselected==2 && input.choice==7",
+#                      selectInput(inputId="summary_variable",
+#                                  label="Choose a Variable",
+#                                  choices=c("Year",
+#                                            "Runtime",
+#                                            "imdbRating",
+#                                            "imdbVotes",
+#                                            "nchar_Title",
+#                                            "average_rating"),
+#                                  selected="Year"),
+#                      selectInput(inputId="covariance",
+#                                  label="Choose a Variable (If 'None' is selected, the 5-number summary will be shown. If 'None' is selected, the covariance will be shown)",
+#                                  choices=c("None",
+#                                            "Year",
+#                                            "Runtime",
+#                                            "imdbRating",
+#                                            "imdbVotes",
+#                                            "nchar_Title",
+#                                            "average_rating"),
+#                                  selected="None")),
+#     
+#     conditionalPanel(condition="input.tabselected==2 && input.choice==6",
+#                      selectInput(inputId="scatter_plot_x_variable",
+#                                  label="Choose X Variable",
+#                                  choices=c("Year",
+#                                            "Runtime",
+#                                            "imdbRating",
+#                                            "imdbVotes",
+#                                            "nchar_Title",
+#                                            "average_rating"),
+#                                  selected = "Year"),
+#                      selectInput(inputId="scatter_plot_y_variable",
+#                                  label="Choose Y Variable",
+#                                  choices=c("Year",
+#                                            "Runtime",
+#                                            "imdbRating",
+#                                            "imdbVotes",
+#                                            "nchar_Title",
+#                                            "average_rating"),
+#                                  selected = "Runtime"),
+#                      selectInput(inputId="color_variable",
+#                                  label="Choose Color Variable",
+#                                  choices=c("Rated",
+#                                            "first_Genre",
+#                                            "first_Country",
+#                                            "Summary_Awards"),
+#                                  selected = "Rated")),
+#     
+#     
+#     #conditionalPanel(condition="input.tabselected==3",uiOutput("varx"),uiOutput("vary")),
+#     
+#     
+#     conditionalPanel(condition="input.tabselected==5 && input.tab==7",
+#                      # selectInput("dataset", "select the desired dataset", choices=ls('package:datasets'),
+#                      #             selected = "mtcars"),
+#                      sliderInput("split",
+#                                  "Choose Percent in Training Set",
+#                                  min = 0.50,
+#                                  max = 0.95,
+#                                  value = 0.80)),
+#     #radioButtons("choice2","Choose a Model", choices=c("Regression Tree" = 1),selected = character(0))),
+#     
+#     conditionalPanel(condition="input.tabselected==5 && input.tab==7",
+#                      h4("Regression Tree"),
+#                      selectInput(inputId="tree_response",
+#                                  label="Choose the Variable You Would Like to Predict in Your Regression Tree",
+#                                  choices=c("Year",
+#                                            "Runtime",
+#                                            "imdbRating",
+#                                            "imdbVotes",
+#                                            "nchar_Title",
+#                                            "average_rating"),
+#                                  selected = "average_rating"),
+#                      actionButton(inputId="execute",
+#                                   label="Go!")),
+#     
+#     
+#     # conditionalPanel(condition="input.tabselected==4",
+#     # radioButtons(inputId="tree_predictors",
+#     #              label="Decide if you want R to find the best predictors or specify them yourself",
+#     #              choices=c("Let R decide best predictors" = 1, "I want to choose my predictors" = 2),
+#     #              selected = "Let R decide best predictors")),
+#     
+#     
+#     
+#     
+#     #),
+#     
+#     # conditionalPanel(condition="input.tabselected==4",
+#     #                  # selectInput("dataset", "select the desired dataset", choices=ls('package:datasets'),
+#     #                  #             selected = "mtcars"),
+#     #                  radioButtons("choice2","Choose an option", choices=c("Regression Tree" = 1))
+#     # 
+#     # ),
+#     
+#     # conditionalPanel(condition="input.tabselected==4 && input.choice2==1",
+#     #                  sliderInput("split",
+#     #                              "Choose Percent in Training Set",
+#     #                              min = 0.50,
+#     #                              max = 0.95,
+#     #                              value = 0.80),
+#     # numericInput(inputId="split",
+#     #              label="Split Data into Training and Test Sets (min is 0.50 and max is 0.95)",
+#     #              value=0.80,
+#     #              min=0.50,
+#     #              max=0.95,
+#     #              step = 0.01),
+#     # selectInput(inputId="response",
+#     #             label="Choose Your Response Variable",
+#     #             choices=c("Year",
+#     #                       "Runtime",
+#     #                       "Metascore",
+#     #                       "imdbRating",
+#     #                       "imdbVotes",
+#     #                       "BoxOffice",
+#     #                       "nchar_Title",
+#     #                       "average_rating"),
+#     #             selected = "Year")),
+#     
+#     
+#     
+#     # 
+#     # conditionalPanel(condition="input.choice2==1",
+#     #                  numericInput(inputId="split",
+#     #                               label="Split Data into Training and Test Sets (min is 50% and max is 95%)",
+#     #                               value=0.90,
+#     #                               min=0.50,
+#     #                               max=0.95,
+#     #                               step = 0.01))
+#     
+#     
+#     
+#   ),
+#   mainPanel(
+#     # recommend review the syntax for tabsetPanel() & tabPanel() for better understanding
+#     # id argument is important in the tabsetPanel()
+#     # value argument is important in the tabPanle()
+#     tabsetPanel(
+#       #       tabPanel("About", value=1, helpText("conditionalPanel(condition, ...) creates a panel that is visible or hidden, 
+#       # depending on the condition given. The condition is evaluated once at 
+#       #               startup and whenever Shiny detects a relevant change in input/output.
+#       #                                          ")),
+#       #tabPanel("About",value=1,conditionalPanel(condition="input.tabselected==1", DT::dataTableOutput("table"))),
+#       tabPanel("About",value=1,h4("The purpose of this app is to explore and train models for a movie data set created using the Open Movie Database", a("(OMDb API).", href = "http://www.omdbapi.com/"),
+#                                   "In order to access the OMDb API, you need to get a free api key. For every movie requested, the OMDb API gives the following information: Title, Year, Rated, Released,
+#                                   Runtime, Genre, Director, Writer, Actors, Plot, Language, Country, Awards, Poster, Ratings.Source, Ratings.Value, Metascore, imdbRating, imdbVotes, imdbID, Type, DVD, 
+#                                   BoxOffice, Production, Website, and Response. The code above the shiny app in the server.R and ui.R files removes some of these columns, converts others to numeric, 
+#                                   and creates two columns: the average_rating column showed the average of the ratings values provided for each movie and Summary_Awards shows whether a movie won and 
+#                                   was nominated for an award, won an award, was nominated for an award, or did not win and was not nominated for an award."),
+#                br(),
+#                h4("This app will explore the data by displaying dynamic summaries (both graphical and numerical summaries of categorical and quantitative data) using histograms, contingency tables, 
+#                   bar plots, and scatter plots (see Data Exploration tab)."),
+#                br(),
+#                h4("This app will model the data (see Modeling tab) dynamically using a multiple linear regression model, regression tree, and a random forest model. A description of each model can
+#                   be found under the Modeling Info subtab. The models will be fit using training data and cross validation (see Model Fitting subtab) and used to make predictions on the test set
+#                   (see Prediction subtab)."),
+#                br(),
+#                h4("This app will also allow you to look at the dataset and save it as a .csv file (see Data tab)."),
+#                br(),
+#                tags$img(src='Lobby.png',height="200px", width="300px",alt="something went wrong",deleteFile=FALSE),
+#                #img(src="C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//project_3//Let's_All_Go_to_the_Lobby.png", align = "center"),
+#       ),
+#       
+#       tabPanel("Data Exploration", value=2, conditionalPanel(condition="input.choice==1", DT::dataTableOutput("dat")),
+#                conditionalPanel(condition="input.choice==2", verbatimTextOutput("struct")),
+#                conditionalPanel(condition="input.choice==3", plotOutput("summary")),
+#                conditionalPanel(condition="input.choice==4", verbatimTextOutput("cont_table")),
+#                conditionalPanel(condition="input.choice==5", plotOutput("bar_plot")),
+#                conditionalPanel(condition="input.choice==6", plotOutput("scatter_plot")),
+#                conditionalPanel(condition="input.choice==7", verbatimTextOutput("summary_table"))),
+#       #conditionalPanel(condition="input.table==")),
+#       #tabPanel("Plot", value=3, plotOutput("plot")), 
+#       #tabPanel("Modeling",value=4),
+#       #conditionalPanel(condition="input.tabselected==4", DT::dataTableOutput("table")),
+#       #conditionalPanel(condition="input.tabselected==4",plotOutput("tree_plot"),textOutput("tree_RMSE"),textOutput("tree_RMSE_train"))),
+#       #conditionalPanel(condition="input.tabselected==4", DT::dataTableOutput("table"), DT::dataTableOutput("table2"), plotOutput("tree_plot"), textOutput("tree_RMSE"))),
+#       #conditionalPanel(condition="input.tabselected==4 && input.choice2==1", plotOutput("tree_plot"), textOutput("tree_RMSE"))),
+#       # tabPanel("Modeling",value=5,
+#       #          tabPanel("subTab11",value=6)),
+#       
+#       tabPanel("Modeling",value=5,
+#                tabsetPanel(
+#                  tabPanel("Modeling Info",value=6),
+#                  tabPanel("Model Fitting",value=7,DT::dataTableOutput("table"),plotOutput("tree_plot"),textOutput("tree_RMSE_train")),
+#                  tabPanel("Prediction",value=8,textOutput("tree_RMSE")),
+#                  id="tab"
+#                )),
+#       
+#       
+#       
+#       # tabsetPanel(id = "subTabPanel1", 
+#       #             tabPanel("subTab11"),
+#       #             tabPanel("subTab12")
+#       # )
+#       # tabPanel("Model",value=4,
+#       #          conditionalPanel(condition="input.choice2==1", verbatimTextOutput("split_data"))),
+#       id = "tabselected"
+#     )
+#   )
+# ))
 
 
 
