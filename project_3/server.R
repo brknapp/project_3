@@ -654,7 +654,7 @@ shinyServer(function(input,output,session)({
     })
     
     output$rt_plot <- renderPlot({
-      rpart.plot(dtree_fit$finalModel)
+      rpart.plot(rt$dtree_fit$finalModel)
     })
     
     
