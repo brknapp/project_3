@@ -14,7 +14,24 @@ library(readr)
 library(rpart.plot)
 library(randomForest)
 
-data <- read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//movie_data_7_30_2022.csv")
+
+data <- read_csv("../project_3/movie_data_7_30_2022.csv")
+#data <- read_csv("movie_data_7_30_2022.csv")
+#data <- read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//movie_data_7_30_2022.csv")
+
+nemo_data <- read_xlsx("../project_3/nemo_test.xlsx")
+
+#nemo_data <- read_xlsx("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//project_3//nemo_test.xlsx")
+
+
+#nemo_data <- read_xlsx("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//10_33_7_23_2022//nemo_test.xlsx")
+nemo_data$Rated <- as.factor(nemo_data$Rated)
+nemo_data$first_Genre <- as.factor(nemo_data$first_Genre)
+nemo_data$first_Country <- as.factor(nemo_data$first_Country)
+nemo_data$first_Country <- as.factor(nemo_data$first_Country)
+nemo_data$Summary_Awards <- as.factor(nemo_data$Summary_Awards)
+nemo_data_with_title <- nemo_data
+nemo_data <- nemo_data %>% select(-c(Title))
 #data<-read_csv("C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//project_3//movie_data.csv") #put the excel sheet in the same file as the server.R and ui.R files!
 
 #this will help us convert the Ratings.Value column to numeric
