@@ -811,7 +811,24 @@ shinyServer(function(input,output,session)({
   
   
   # nemo <- reactiveValues(nemo_test = NULL)
+  output$ex1 <- renderUI({
+    withMathJax(helpText('$$Y_i = B_0 + B_1 x_i + E_i$$'))
+  })
   
+  output$ex2 <- renderUI({
+    withMathJax(helpText('$$(y_i - B_0 - B_1 x_i)^2$$'))
+  })
+  
+  output$ex3 <- renderUI({
+    withMathJax(helpText('$$Y_i = B_0 + B_1 x_1 + B_2 x_2 + B_3 x_1 x_2 + E_i$$'))
+  })
+  
+  output$ex4 <- renderUI({
+    withMathJax(helpText('$$R_1(j,s) = x|x_j < s$$'))
+  })
+  output$ex5 <- renderUI({
+    withMathJax(helpText('$$R_2(j,s) = x|x_j >= s$$'))
+  })
   
 }))
 

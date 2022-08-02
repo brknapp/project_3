@@ -197,8 +197,9 @@ library(ggplot2)
 #trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
 trctrl <- trainControl(method = "repeatedcv", number = 5, repeats = 3)
 shinyUI(pageWithSidebar(
-  headerPanel("Use case - Change the side bar panel elements based on the selected tab."),
+  headerPanel("Project 3: Movie Modeling by Bridget Knapp"),
   sidebarPanel(
+    withMathJax(),
     
     ## conditionalPanel() functions for selected tab
     #conditionalPanel(condition="input.tabselected==1",h4("Demo conditionalPanel()")),
@@ -701,17 +702,11 @@ shinyUI(pageWithSidebar(
                                   Runtime, Genre, Director, Writer, Actors, Plot, Language, Country, Awards, Poster, Ratings.Source, Ratings.Value, Metascore, imdbRating, imdbVotes, imdbID, Type, DVD, 
                                   BoxOffice, Production, Website, and Response. The code above the shiny app in the server.R and ui.R files removes some of these columns, converts others to numeric, 
                                   and creates two columns: the average_rating column showed the average of the ratings values provided for each movie and Summary_Awards shows whether a movie won and 
-                                  was nominated for an award, won an award, was nominated for an award, or did not win and was not nominated for an award."),
+                                  was nominated for an award, won an award, was nominated for an award, or did not win and was not nominated for an award. Please see how_i_made_my_data_set.R for more information."),
                br(),
-               h4("This app will explore the data by displaying dynamic summaries (both graphical and numerical summaries of categorical and quantitative data) using histograms, contingency tables, 
-                  bar plots, and scatter plots (see Data Exploration tab)."),
+               h4("The “Data Exploration” page allows you to make summaries (both graphical and numerical summaries of categorical and quantitative data) using histograms, contingency tables, bar plots, and scatter plots. The “Modeling Info” sub tab describes all of the models that are run in this app. The “Model Fitting” subtab allows you to choose the size of the training and test set, which variable you want to predict, and what variables you want to use to predict for each model. The “Prediction” sub tab will display the prediction for a selected model for given parameters (must hit “Go” on “Model Fitting” subtab first). Lastly, the “Data” page allows you to filter and export the data."),
                br(),
-               h4("This app will model the data (see Modeling tab) dynamically using a multiple linear regression model, regression tree, and a random forest model. A description of each model can
-                  be found under the Modeling Info subtab. The models will be fit using training data and cross validation (see Model Fitting subtab) and used to make predictions on the test set
-                  (see Prediction subtab)."),
-               br(),
-               h4("This app will also allow you to look at the dataset and save it as a .csv file (see Data tab)."),
-               br(),
+               h4("Please allow at least 2 minutes for the models to run."),
                tags$img(src='Lobby.png',height="200px", width="300px",alt="something went wrong",deleteFile=FALSE),
                #img(src="C://Users//Bridget//OneDrive//R_Scripts//repos//project_3//project_3//Let's_All_Go_to_the_Lobby.png", align = "center"),
       ),
@@ -735,7 +730,22 @@ shinyUI(pageWithSidebar(
       
       tabPanel("Modeling",value=5,
                tabsetPanel(
-                 tabPanel("Modeling Info",value=6),
+                 tabPanel("Modeling Info",value=6,h4("Linear regression uses the linear relationship between two variables to make predictions. Below is the formula for the basic Simple Linear Regression (SRL) model. It models a response, Y, as a linear function of a predictor variable, x. Beta-not is the average response of Y and E represents the error."),
+                          uiOutput('ex1'),
+                          h4("The model is fit by minimizing the sum of squared residuals (see equation below)."),
+                          uiOutput('ex2'),
+                          h4("Multiple Linear Regression is an extension of SLR. This allows us to have many explanatory variables and interaction terms (see example equation below). It is also fit by minimizing the sum of squared residuals. The response, Y, is being modelled just like an SLR, but in this case, the model also includes an interaction term between x1 and x2."),
+                          uiOutput('ex3'),
+                          h4("Multiple Linear Regression models can help determine which predictors are better at predicting the response variable and determine outliers in the data. However, one drawback is that it assumes that all of the data points are independent of one another."),
+                          br(),
+                          h4("Next, tree-based models split the predictor space into regions and then formulate predictions based on those regions. Regression trees determine each split by using recursive binary splitting, an algorithm that takes every possible value for each predictor, finds the residual sum of squares (RSS, see equation below), and minimizes the RSS based off the mean value for each possible split it could do. Regression trees predict a continuous response by using the mean of all the observations in a given predictor space region. A tree model is more flexible than a SLR model because it’s more flexible than an SLR model, but this flexibility may increase the variance."),
+                          uiOutput('ex4'),
+                          uiOutput('ex5'),
+                          h4("Last, a random forest model uses a random subset of predictors to grow a “forest” of trees and uses the average prediction from these trees as the final prediction. One advantage to this is that, if your data set has a strong predictor, then all the tree models will probably be created using this predictor as their first split, resulting in trees that are highly correlated with one another. A random forest prevents this by only using some of the predictors to grow each tree. One drawback is that there is a risk of overfitting.")
+                          
+                          
+                          
+                          ),
                  #tabPanel("Model Fitting",value=7, textOutput("lm_heading"), verbatimTextOutput("lm_results"), verbatimTextOutput("lm_sum_results")),
                  tabPanel("Model Fitting",value=7, DT::dataTableOutput("table"),textOutput("rf_heading"), verbatimTextOutput("rf_RMSE_test"),verbatimTextOutput("rf_RMSE_results"),plotOutput("varimp"),textOutput("rf_test_rmse"),textOutput("rt_heading"),textOutput("rt_train_rmse"),textOutput("rt_test_rmse"),verbatimTextOutput("rt_RMSE_results"),plotOutput("rt_plot"), textOutput("lm_heading"), verbatimTextOutput("lm_results"), verbatimTextOutput("lm_sum_results"),textOutput("lm_test_rmse")),
                  #tabPanel("Model Fitting",value=7,DT::dataTableOutput("table"),plotOutput("tree_plot"),textOutput("tree_RMSE_train"), textOutput("rf_RMSE_train"), verbatimTextOutput("rf_RMSE_table"), plotOutput("varimp"), verbatimTextOutput("rf_train_stats")),
