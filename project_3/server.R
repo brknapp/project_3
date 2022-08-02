@@ -13,7 +13,8 @@ library(rpart.plot)
 library(randomForest)
 library(shiny)
 
-data <- read_csv("../project_3/movie_data_7_30_2022.csv") #data from OMDb API
+data <- read_csv("../project_3/movie_data_8_01_2022_v3.csv")
+#data <- read_csv("../project_3/movie_data_7_30_2022.csv") #data from OMDb API
 nemo_data <- read_xlsx("../project_3/nemo_test.xlsx") #example of test data someone could enter and make predictions on
 
 nemo_data$Rated <- as.factor(nemo_data$Rated)
