@@ -7,4 +7,4 @@ tidyverse helps format and select the data. ggplot2, rpart.plot makes plots. rea
 Run this to install all of the packages you will need:
 install.packages(c("tidyverse","ggplot2", "readr","class","caret", "DT","tree","readxl","rpart.plot","randomForest","shiny"))
 
-shiny::runGitHub(repo="project_3",username = "brknapp",ref = "main",subdir = "project_3")
+Run this in RStudio to run my app: shiny::runGitHub(repo="project_3",username = "brknapp",ref = "main",subdir = "project_3")
